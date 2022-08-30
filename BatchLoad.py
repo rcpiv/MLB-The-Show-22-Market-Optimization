@@ -123,60 +123,14 @@ items_df = items_df.rename(columns={
 #%% Replace values < QS w/ QS
 items_df['Sell Now Price'] = np.where(items_df['Sell Now Price'] < items_df['Quicksell Price'],\
                     items_df['Quicksell Price'], items_df['Sell Now Price'])
-#%% Create Margin Columns
-items_df['Margin'] = (((items_df['Buy Now Price'] * .9)-1) - (items_df['Sell Now Price']+1)) / ((items_df['Buy Now Price'] * .9)+1) * 100
+#%% Create Profit and Margin Columns
+items_df['Profit'] = ((items_df['Buy Now Price'] * .9)-1) - (items_df['Sell Now Price']+1)
+items_df['Margin'] = items_df['Profit'] /  ((items_df['Buy Now Price'] * .9)+1) * 100
  
-#%% Get completed sales
-import concurrent.futures
-import requests
-import itertools
-
-out = []
-CONNECTIONS = 10
-TIMEOUT = 15
-
-urls = [f"https://mlb22.theshow.com/apis/listing.json?uuid={uuid}" for uuid in items_df.ID]
-
-url_list = [urls[i::20] for i in range(1,21)]
-
-for links in url_list:
-    def load_url(url, timeout):
-        ans = requests.get(url, timeout=timeout)
-        return ans.text
-    
-    with concurrent.futures.ThreadPoolExecutor(max_workers=CONNECTIONS) as executor:
-        future_to_url = (executor.submit(load_url, url, TIMEOUT) for url in links)
-        for future in concurrent.futures.as_completed(future_to_url):
-            try:
-                data = future.result()
-                data = json.loads(data)
-            except Exception:
-                future.cancel()
-            finally:    
-                out.append(data)
-    sec = 60
-    print(f"Iteration {url_list.index(links)+1} of {len(url_list)} finished; sleeping for {sec} seconds")
-    time.sleep(sec)
-    
-#%%
-price_dic = {}
-price_df = pd.DataFrame()
-for n in out:
-    price_dic[n['item']['uuid']] = pd.json_normalize(n['completed_orders'])
-    try:
-        price_dic[n['item']['uuid']]['date'] = pd.to_datetime(price_dic[n['item']['uuid']]['date'])
-    except:
-        None
-price_dic['uuid'] = price_dic[n['item']['uuid']]
-del price_dic[n['item']['uuid']]
-
-for uuid in price_dic.keys():
-    price_dic[uuid] = len(price_dic[uuid]['date']>=(dt.datetime.now()-dt.timedelta(hours=1)))
-
 #%% Sort By Descending Order and Create .CSV
-# items_df = items_df.sort_values('Margin', ascending = False)
+items_df = items_df.sort_values('Profit', ascending = False)
 
-# from datetime import date
-# items_df.to_csv(f"C:\\Users\\rcpat\\Desktop\\Personal Projects\\Show22\\Outputs\\Show22_Listings_{date.today()}.csv", index = False)
+from datetime import date
+items_df.to_csv(f"C:\\Users\\rcpat\\Desktop\\Personal Projects\\Show22\\Outputs\\Show22_Listings_{date.today()}.csv", index = False)
 
 

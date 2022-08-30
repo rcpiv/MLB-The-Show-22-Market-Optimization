@@ -18,11 +18,12 @@ from email.mime.text import MIMEText
 from datetime import date
 
 #%% Variables
+# Change these to whatever you need
 emailfrom = "rcpatterson97@gmail.com"
 emailto = "rcpatterson97@gmail.com"
 fileToSend = f"C:\\Users\\rcpat\\Desktop\\Personal Projects\\Show22\\Outputs\\Show22_Listings_{date.today()}.csv"
 username = "rcpatterson97"
-password = "mcfizzle101"
+password = open("C:\\Users\\rcpat\\Desktop\\Personal Projects\\Show22\\app_pass.txt", 'r').readlines()[0]
 
 #%% Configure
 msg = MIMEMultipart()
